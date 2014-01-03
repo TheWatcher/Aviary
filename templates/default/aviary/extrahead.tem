@@ -1,0 +1,2 @@
+    <link href="{V_[templatepath]}css/aviary.css" rel="stylesheet" />
+    <script type="text/javascript" src="{V_[templatepath]}js/aviary.js"></script>
