@@ -166,7 +166,8 @@ sub _get_tweet_time {
     my $row   = shift;
     my $cell  = $sheet -> get_cell($row, $col);
 
-    return undef if(!$cell || $cell -> value() !~ /^\d+:\d+$/);
+    return undef if(!$cell);
+    return ""    if($cell -> value() !~ /^\d+:\d+$/);
     return $cell -> value();
 }
 
@@ -186,7 +187,13 @@ sub _get_tweet_text {
     my $row   = shift;
     my $cell  = $sheet -> get_cell($row, $col);
 
-    return $cell ? $cell -> value() : undef;
+    # Hald if no cell, or cell contains a date
+    return undef if(!$cell || $cell -> value() =~ /^\d+-\w+$/);
+
+    # filled cells should not be handled
+    return "" if($cell -> get_format() -> {"Fill"} -> [0]);
+
+    return $cell -> value();
 }
 
 
@@ -211,9 +218,17 @@ sub _find_tweetlist {
     my $tweetcol = $datecol; # Tweets are below the date
 
     my $tweets = {};
-    while(my $time = $self -> _get_tweet_time($sheet, $timecol, $timerow)) {
+    while(1) {
+        my $time = $self -> _get_tweet_time($sheet, $timecol, $timerow);
+        last unless(defined($time));
+
+        my $tweet = $self -> _get_tweet_text($sheet, $tweetcol, $timerow);
+        last unless(defined($tweet));
+
+        print "Tweet at $tweetcol,$timerow = '$time' => '$tweet'\n";
         # Allow multiple tweets with the same time.
-        push(@{$tweets -> {$time}}, $self -> _get_tweet_text($sheet, $tweetcol, $timerow));
+        push(@{$tweets -> {$time}}, $tweet)
+            if($time && $tweet);
 
         ++$timerow;
     }
