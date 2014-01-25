@@ -1,4 +1,4 @@
-### @file
+## @file
 # This file contains the implementation of the Aviary block base class.
 #
 # @author  Chris Page &lt;chris@starforge.co.uk&gt;
@@ -23,7 +23,9 @@ package Aviary;
 use strict;
 use base qw(Webperl::Block); # Features are just a specific form of Block
 use CGI::Util qw(escape);
+use HTML::Entities;
 use Webperl::Utils qw(join_complex path_join);
+use HTML::WikiConverter;
 use XML::Simple;
 
 # ============================================================================
@@ -39,7 +41,19 @@ use XML::Simple;
 sub new {
     my $invocant = shift;
     my $class    = ref($invocant) || $invocant;
-    my $self     = $class -> SUPER::new(@_)
+    my $self     = $class -> SUPER::new(entitymap => { '&ndash;'  => '-',
+                                                       '&mdash;'  => '-',
+                                                       '&rsquo;'  => "'",
+                                                       '&lsquo;'  => "'",
+                                                       '&ldquo;'  => '"',
+                                                       '&rdquo;'  => '"',
+                                                       '&hellip;' => '...',
+                                                       '&gt;'     => '>',
+                                                       '&lt;'     => '<',
+                                                       '&amp;'    => '&',
+                                                       '&nbsp;'   => ' ',
+                                        },
+                                        @_)
         or return undef;
 
     return $self;
@@ -47,10 +61,9 @@ sub new {
 
 
 # ============================================================================
-#  Page generation support
+#  HTML generation support
 
-
-## @method $ generate_aviary_page($title, $content, $extrahead)
+## @method $ generate_aviary_page($title, $content, $extrahead, $doclink)
 # A convenience function to wrap page content in the standard page template. This
 # function allows blocks to embed their content in a page without having to build
 # the whole page including "common" items themselves. It should be called to wrap
@@ -59,18 +72,21 @@ sub new {
 # @param title     The page title.
 # @param content   The content to show in the page.
 # @param extrahead Any extra directives to place in the header.
+# @param doclink   The name of a document link to include in the userbar. If not
+#                  supplied, no link is shown.
 # @return A string containing the page.
 sub generate_aviary_page {
     my $self      = shift;
     my $title     = shift;
     my $content   = shift;
-    my $extrahead = shift || "";
+    my $extrahead = shift;
+    my $doclink   = shift;
 
     my $userbar = $self -> {"module"} -> load_module("Aviary::Userbar");
 
-    return $self -> {"template"} -> load_template("page.tem", {"***extrahead***" => $extrahead,
-                                                               "***title***"     => $title,
-                                                               "***userbar***"   => ($userbar ? $userbar -> block_display($title, $self -> {"block"}) : "<!-- Userbar load failed: ".$self -> {"module"} -> errstr()." -->"),
+    return $self -> {"template"} -> load_template("page.tem", {"***extrahead***" => $extrahead || "",
+                                                               "***title***"     => $title || "",
+                                                               "***userbar***"   => ($userbar ? $userbar -> block_display($title, $self -> {"block"}, $doclink) : "<!-- Userbar load failed: ".$self -> {"module"} -> errstr()." -->"),
                                                                "***content***"   => $content});
 }
 
@@ -106,6 +122,44 @@ sub generate_errorbox {
                                                    "***extrahead***" => "",
                                                    "***userbar***"   => ($userbar ? $userbar -> block_display($title) : "<!-- Userbar load failed: ".$self -> {"module"} -> errstr()." -->"),
                                                   });
+}
+
+
+## @method $ generate_multiselect($name, $class, $idbase, $options, $selected)
+# Generate a MultiSelect dropdown list (essentially a list of checkboxes that gets
+# converted to a dropdown using the MultiSelect javascript module).
+#
+# @param name     The name of the multiselect option list.
+# @param class    A class to add to the class attribute for the checkboxes in the list.
+# @param idbase   A unique base name for the ID of checkboxes in the list.
+# @param options  A reference to an array of option hashes. Each hash should contain
+#                 `name` a short name used in the class, `id` a numeric ID used in the
+#                 id and value attributes, and `desc` used in the label.
+# @param selected A reference to a list of selected option IDs.
+# @return A string containing the multiselect list checkboxes.
+sub generate_multiselect {
+    my $self     = shift;
+    my $name     = shift;
+    my $class    = shift;
+    my $idbase   = shift;
+    my $options  = shift;
+    my $selected = shift;
+
+    # Convert the selected list to a hash for faster lookup
+    my %active = map { $_ => 1} @{$selected};
+
+    my $result = "";
+    foreach my $option (@{$options}) {
+        $result .= $self -> {"template"} -> load_template("multisel-item.tem", {"***class***"   => $class,
+                                                                                "***idbase***"  => $idbase,
+                                                                                "***selname***" => $name,
+                                                                                "***name***"    => $option -> {"name"},
+                                                                                "***id***"      => $option -> {"id"},
+                                                                                "***desc***"    => $option -> {"desc"},
+                                                                                "***checked***" => $active{$option -> {"id"}} ? 'checked="checked"' : ''});
+    }
+
+    return $result;
 }
 
 
@@ -146,14 +200,9 @@ sub check_login {
     if($self -> {"session"} -> anonymous_session()) {
         $self -> log("error:anonymous", "Redirecting anonymous user to login form");
 
-        if($self -> is_api_operation()) {
-            return $self -> api_html_response($self -> api_errorhash('bad_op',
-                                                                     $self -> {"template"} -> replace_langvar("API_SESSION_GONE", {"***login_url***" => $self -> build_login_url()})))
+        print $self -> {"cgi"} -> redirect($self -> build_login_url());
+        exit;
 
-        } else {
-            print $self -> {"cgi"} -> redirect($self -> build_login_url());
-            exit;
-        }
     # Otherwise, permissions need to be checked
     } elsif(!$self -> check_permission("view")) {
         $self -> log("error:permission", "User does not have perission 'view'");
@@ -364,10 +413,67 @@ sub set_saved_state {
 sub get_saved_state {
     my $self = shift;
 
-    return ($self -> {"session"} -> get_variable("saved_block"),
-            $self -> {"session"} -> get_variable("saved_pathinfo"),
-            $self -> {"session"} -> get_variable("saved_api"),
-            $self -> {"session"} -> get_variable("saved_qstring"));
+    # Yes, these use set_variable. set_variable will return the value in the
+    # variable, like get_variable, except that this will also delete the variable
+    return ($self -> {"session"} -> set_variable("saved_block"),
+            $self -> {"session"} -> set_variable("saved_pathinfo"),
+            $self -> {"session"} -> set_variable("saved_api"),
+            $self -> {"session"} -> set_variable("saved_qstring"));
+}
+
+
+## @method $ cleanup_entities($html)
+# Wrangle the specified HTML into something that won't produce an unholy mess when
+# passed to something that doesn't handle UTF-8 properly.
+#
+# @param html The HTML to process
+# @return A somewhat cleaned-up string of HTML
+sub cleanup_entities {
+    my $self = shift;
+    my $html = shift;
+
+    $html =~ s/\r//g;
+    return encode_entities($html, '^\n\x20-\x7e');
+}
+
+
+## @method $ make_markdown_body($html, $images)
+# Convert the specified html into markdown text.
+#
+# @param html   The HTML to convert to markdown.
+# @param images An optional reference to an array of images.
+# @return The markdown version of the text.
+sub make_markdown_body {
+    my $self   = shift;
+    my $html   = shift;
+    my $images = shift || [];
+
+    # Handle html entities that are going to break...
+    foreach my $entity (keys(%{$self -> {"entitymap"}})) {
+        $html =~ s/$entity/$self->{entitymap}->{$entity}/g;
+    }
+
+    my $converter = new HTML::WikiConverter(dialect => 'Markdown',
+                                            link_style => 'inline',
+                                            image_tag_fallback => 0);
+    my $body = $converter -> html2wiki($html);
+
+    # Clean up html the converter misses consistently
+    $body =~ s|<br\s*/>|\n|g;
+    $body =~ s|&gt;|>|g;
+
+    my $imglist = "";
+    for(my $i = 0; $i < 3; ++$i) {
+        next unless($images -> [$i] -> {"location"});
+
+        $imglist .= $self -> {"template"} -> load_template("Notification/Method/Email/md_image.tem", {"***url***" => $images -> [$i] -> {"location"}});
+    }
+
+    my $imageblock = $self -> {"template"} -> load_template("Notification/Method/Email/md_images.tem", {"***images***" => $imglist})
+        if($imglist);
+
+    return $self -> {"template"} -> load_template("Notification/Method/Email/markdown.tem", {"***text***" => $body,
+                                                                                             "***images***" => $imageblock});
 }
 
 
@@ -383,12 +489,15 @@ sub get_saved_state {
 sub build_login_url {
     my $self = shift;
 
-    # Note: CGI::query_string() produces a properly escaped, joined query string based on the
-    #       **current parameters**, even ones added by the program (hence the pathinfo, api and block
-    #       parameters added by the BlockSelector will be included!)
-    $self -> {"session"} -> set_variable("savestate", $self -> {"cgi"} -> query_string());
+    # Store as much state as possible to restore after login (does not store POST
+    # data!)
+    $self -> set_saved_state();
 
-    return $self -> build_url(block => "login");
+    return $self -> build_url(block    => "login",
+                              fullurl  => 1,
+                              pathinfo => [],
+                              params   => {},
+                              forcessl => 1);
 }
 
 
@@ -433,6 +542,7 @@ sub build_return_url {
 #              Values in the hash may be references to arrays, in which case multiple
 #              copies of the parameter are added to the query string, one for each
 #              value in the array.
+# * forcessl - If true, the URL is forced to https: rather than http:
 #
 # @param args A hash of arguments to use when building the URL.
 # @return A string containing the URL.
@@ -478,44 +588,40 @@ sub build_url {
         $url .= "?$querystring";
     }
 
+    $url =~ s/^http:/https:/
+        if($args{"forcessl"} && $url =~ /^http:/);
+
     return $url;
 }
 
 
-## @method $ build_pagination($maxpage, $pagenum, $mode, $count)
-# Generate the navigation/pagination box for the message list. This will generate
-# a series of boxes and controls to allow users to move between pages of message
-# list.
+# ============================================================================
+#  Documentation support
+
+## @method $ get_documentation_url($doclink)
+# Given a documentation link name, obtain the URL associated with that name.
 #
-# @param maxpage   The last page number (first is page 1).
-# @param pagenum   The selected page (first is page 1)
-# @param mode      The view mode
-# @return A string containing the navigation block.
-sub build_pagination {
-    my $self      = shift;
-    my $maxpage   = shift;
-    my $pagenum   = shift;
-    my $mode      = shift;
+# @param doclink The name of the documentation link to fetch.
+# @return The documentation URL if the doclink is valid, undef otherwise.
+sub get_documentation_url {
+    my $self    = shift;
+    my $doclink = shift;
 
-    # If there is more than one page, generate a full set of page controls
-    if($maxpage > 1) {
-        my $pagelist = "";
+    $self -> clear_error();
 
-        my $active = ($pagenum > 1) ? "newer.tem" : "newer_disabled.tem";
-        $pagelist .= $self -> {"template"} -> load_template("paginate/$active", {"***prev***"  => $self -> build_url(pathinfo => [$mode, $pagenum - 1])});
+    # No point trying anything if there is no link name set.
+    return undef if(!$doclink);
 
-        $active = ($pagenum < $maxpage) ? "older.tem" : "older_disabled.tem";
-        $pagelist .= $self -> {"template"} -> load_template("paginate/$active", {"***next***" => $self -> build_url(pathinfo => [$mode, $pagenum + 1])});
+    my $urlh = $self -> {"dbh"} -> prepare("SELECT `url`
+                                            FROM `".$self -> {"settings"} -> {"database"} -> {"docs"}."`
+                                            WHERE `name` LIKE ?");
+    $urlh -> execute($doclink)
+        or return $self -> self_error("Unable to look up documentation link: ".$self -> {"dbh"} -> errstr);
 
-        return $self -> {"template"} -> load_template("paginate/block.tem", {"***pagenum***" => $pagenum,
-                                                                             "***maxpage***" => $maxpage,
-                                                                             "***pages***"   => $pagelist});
-    # If there's only one page, a simple "Page 1 of 1" will do the trick.
-    } else { # if($maxpage > 1)
-        return $self -> {"template"} -> load_template("paginate/block.tem", {"***pagenum***" => 1,
-                                                                             "***maxpage***" => 1,
-                                                                             "***pages***"   => ""});
-    }
+    # Fetch the url row, and if one has been found return it.
+    my $url = $urlh -> fetchrow_arrayref();
+    return $url ? $url -> [0] : undef;
 }
+
 
 1;
