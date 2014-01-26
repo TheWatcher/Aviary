@@ -28,6 +28,8 @@ use base qw(Webperl::System);
 use Aviary::System::Metadata;
 use Aviary::System::Roles;
 use Aviary::System::Tags;
+use Aviary::System::Schedule;
+
 
 ## @method $ init(%args)
 # Initialise the Aviary System's references to other system objects. This
@@ -69,6 +71,11 @@ sub init {
                                                       logger   => $self -> {"logger"},
                                                       metadata => $self -> {"metadata"})
         or return $self -> self_error("Roles system init failed: ".$Webperl::SystemModule::errstr);
+
+    $self -> {"schedule"} = Aviary::System::Schedule -> new(dbh      => $self -> {"dbh"},
+                                                            settings => $self -> {"settings"},
+                                                            logger   => $self -> {"logger"})
+        or return $self -> self_error("Schedule init failed: ".$Webperl::SystemModule::errstr);
 
     return 1;
 }

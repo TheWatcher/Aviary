@@ -1,0 +1,5 @@
+    <link href="{V_[templatepath]}css/import.css" rel="stylesheet" />
+    <script type="text/javascript" src="{V_[templatepath]}js/import.js"></script>
+    <script type="text/javascript">
+        spinner_img = "{V_[templatepath]}images/spinnger.gif";
+    </script>

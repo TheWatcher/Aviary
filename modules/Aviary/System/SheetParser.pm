@@ -35,7 +35,9 @@ use DateTime;
 # Parse the schedule out of the specified worksheet in the excel
 # workbook, and return an array containing the schedule data.
 #
-# @param bookname  The filename of the excel workbook to parse the data from.
+# @param bookname  The filename of the excel workbook to parse the
+#                  data from. This can also be a filehandle or
+#                  a scalar reference.
 # @param sheetname The name (or number) of the worksheet in the
 #                  workbook that contains the schedule data.
 # @return A reference to an array of hashes, each hash is a day

@@ -36,3 +36,8 @@ a:hover, a:focus {
 .alignright {
     text-align: right;
 }
+
+p {
+    margin: 0px;
+    padding: 0px;
+}

@@ -1,1 +1,10 @@
-IMPORT_TITLE = Import Schedule
+IMPORT_TITLE     = Import Schedule
+
+IMPORT_INTRO     = Use this form to import an Excel workbook (.xls format only, <em>not</em> .xlsx) into your schedule. Any previously imported scheduled messages that have not yet been posted will be removed as part of the import process.
+IMPORT_EXCELFILE = Excel workbook file
+IMPORT_SUBMIT    = Import
+
+
+IMPORT_ERR_NOFILESET = No excel file selected, unable to import anything.
+IMPORT_ERR_BADHANDLE = An internal file handle problem was encoutered. Please try again.
+IMPORT_ERR_BADPARSER = Unable to create a spreadsheet parser object.

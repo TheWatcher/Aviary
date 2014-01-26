@@ -1,0 +1,17 @@
+***errorbox***
+<div id="importbox" class="shadowbox">
+    <h2>{L_IMPORT_TITLE}</h2>
+    <div class="sbcontent">
+        <p>{L_IMPORT_INTRO}</p>
+        <form id="importform" method="post" action="">
+            <dl class="input">
+                <dt><label for="excelfile">{L_IMPORT_EXCELFILE}</label></dt>
+                <dd><input id="excelfile" name="excelfile" type="file" style="fillwide" /></dd>
+            </dl>
+            <div class="submitbox">
+                <span id="spinner"></span>
+                <input type="submit" class="button blue" id="import" name="import" value="{L_IMPORT_SUBMIT}" />
+            </div>
+        </form>
+    </div>
+</div>
