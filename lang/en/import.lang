@@ -4,6 +4,9 @@ IMPORT_INTRO     = Use this form to import an Excel workbook (.xls format only, 
 IMPORT_EXCELFILE = Excel workbook file
 IMPORT_SUBMIT    = Import
 
+IMPORT_SUCCESS   = Import completed successfully
+IMPORT_SUMMARY   = Import completed successfully
+IMPORT_LONGDESC  = <p>The schedule in the uploaded spreadsheet has been imported successfully. ***removed*** unposted scheduled messages were removed, and ***added*** messages were added.<p>
 
 IMPORT_ERR_NOFILESET = No excel file selected, unable to import anything.
 IMPORT_ERR_BADHANDLE = An internal file handle problem was encoutered. Please try again.

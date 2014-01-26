@@ -51,6 +51,33 @@ sub _generate_upload {
 }
 
 
+sub _generate_success {
+    my $self    = shift;
+    my $removed = shift;
+    my $added   = shift;
+
+    my $url = $self -> build_url(pathinfo => [],
+                                 api      => [],
+                                 params   => {});
+
+    my $content = $self -> {"template"} -> message_box($self -> {"template"} -> replace_langvar("IMPORT_SUCCESS"),
+                                                       "imported",
+                                                       $self -> {"template"} -> replace_langvar("IMPORT_SUMMARY"),
+                                                       $self -> {"template"} -> replace_langvar("IMPORT_LONGDESC", {"***url***"     => $url,
+                                                                                                                    "***removed***" => $removed,
+                                                                                                                    "***added***"   => $added}),
+                                                       undef,
+                                                       "successbox",
+                                                       [ {"message" => $self -> {"template"} -> replace_langvar("SITE_CONTINUE"),
+                                                          "colour"  => "blue",
+                                                          "action"  => "location.href='$url'"} ]);
+    my $extrahead = $self -> {"template"} -> load_template("refreshmeta.tem", {"***url***" => $url});
+
+    return ($self -> {"template"} -> replace_langvar("IMPORT_SUCCESS"), $content, $extrahead);
+}
+
+
+
 # ============================================================================
 #  Validation and workers
 

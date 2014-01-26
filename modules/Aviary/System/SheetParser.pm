@@ -227,7 +227,6 @@ sub _find_tweetlist {
         my $tweet = $self -> _get_tweet_text($sheet, $tweetcol, $timerow);
         last unless(defined($tweet));
 
-        print "Tweet at $tweetcol,$timerow = '$time' => '$tweet'\n";
         # Allow multiple tweets with the same time.
         push(@{$tweets -> {$time}}, $tweet)
             if($time && $tweet);

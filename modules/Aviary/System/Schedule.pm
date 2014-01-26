@@ -47,4 +47,59 @@ sub clear_unposted {
 }
 
 
+## @method $ import_schedule($schedule, $userid, $source, $incpast)
+# Import the messages in the specified schedule, marking them as owned by
+# the specified user and coming from the provided source.
+#
+# @param schedule A reference to an array of schedule hashes, as returned
+#                 by Aviary::System::SheetParser::load_schedule()
+# @param userid   The ID of the user to attribute the messages to.
+# @param source   The source name to attach to the messages
+# @param incpast  If set to true, messages are scheduled even though they
+#                 are at a time or date in the past.
+# @return The number of added messages on success, undef on error.
+sub import_schedule {
+    my $self     = shift;
+    my $schedule = shift;
+    my $userid   = shift;
+    my $source   = shift;
+    my $incpast  = shift;
+    my $added    = 0;
+    my $now      = time();
+
+    # This query will be used a lot, so prepare in advance
+    my $schedh = $self -> {"dbh"} -> prepare("INSERT INTO `".$self -> {"settings"} -> {"database"} -> {"schedule"}."`
+                                              (`post_at`, `added`, `creator_id`, `edited`, `editor_id`, `source`, `tweet`)
+                                              VALUES(?, UNIX_TIMESTAMP(), ?, UNIX_TIMESTAMP(), ?, ?, ?)");
+
+    # The schedule arrayref contains a list of days
+    foreach my $day (@{$schedule}) {
+
+        # Each day contains a DateTime object and a list of hash of tweet lists, keyed by time
+        foreach my $time (keys(%{$day -> {"tweets"}})) {
+            my ($hour, $minute) = $time =~ /^(\d+):(\d+)$/;
+
+            # This check *should* be redundant, but do it anyway: only handle valid times
+            if(defined($hour) && defined($minute)) {
+                # Just use the DateTime object in the day for the tweet time and day
+                $day -> {"date"} -> set(hour => $hour, minute => $minute);
+
+                # Only add messages due to be posted in TEH FUTURE, unless past inclusion is enabled
+                my $postat = $day -> {"date"} -> epoch();
+                next unless($incpast || $postat > $now);
+
+                # Process the list of tweets for the current time and day.
+                foreach my $tweet (@{$day -> {"tweets"} -> {$time}}) {
+                    $schedh -> execute($postat, $userid, $userid, $source, $tweet)
+                        or return $self -> self_error("Failed to add ".$day -> {"date"}.":$tweet to schedule: ".$self -> {"dbh"} -> errstr);
+
+                    ++$added;
+                }
+            }
+        }
+    }
+
+    return $added;
+}
+
 1;

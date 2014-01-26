@@ -147,6 +147,9 @@
     border: 1px solid red;
 }
 
+.aviary #content {
+    margin-top: 40px;
+}
 
 .navpoint {
     border: none;
