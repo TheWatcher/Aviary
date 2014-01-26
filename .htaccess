@@ -11,9 +11,9 @@ RewriteEngine On
 
 # If the installation is in a subdirectory, add a rewritebase rule for the subdir
 # RewriteBase /subdir/
-RewriteBase /dashboard/
+RewriteBase /aviary/
 
-RewriteCond %{REQUEST_URI} !^/dashboard/(templates|media|docs|ckeditor|images|index.cgi)
+RewriteCond %{REQUEST_URI} !^/aviary/(templates|media|docs|ckeditor|images|index.cgi)
 RewriteRule (.*) index.cgi/$1 [PT,L]
 
 # Compress text, html, javascript, css, xml:

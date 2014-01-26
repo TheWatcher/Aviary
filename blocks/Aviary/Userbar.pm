@@ -25,36 +25,57 @@ use strict;
 use base qw(Aviary);
 use v5.12;
 
+
 # ==============================================================================
 #  Bar generation
 
-## @method $ block_display($title, $current)
+## @method $ block_display($title, $current, $doclink)
 # Generate a user toolbar, populating it as needed to reflect the user's options
 # at the current time.
 #
 # @param title   A string to show as the page title.
 # @param current The current page name.
+# @param doclink The name of a document link to include in the userbar. If not
+#                supplied, no link is shown.
 # @return A string containing the user toolbar html on success, undef on error.
 sub block_display {
     my $self    = shift;
     my $title   = shift;
     my $current = shift;
+    my $doclink = shift;
 
     $self -> clear_error();
 
+    my $loginurl = $self -> build_url(block => "login",
+                                      fullurl  => 1,
+                                      pathinfo => [],
+                                      params   => {},
+                                      forcessl => 1);
+
+    my $fronturl = $self -> build_url(block    => $self -> {"settings"} -> {"config"} -> {"default_block"},
+                                      fullurl  => 1,
+                                      pathinfo => [],
+                                      params   => {});
+
     # Initialise fragments to sane "logged out" defaults.
-    my ($siteadmin, $msglist, $compose, $userprofile) =
-        ($self -> {"template"} -> load_template("userbar/siteadmin_disabled.tem"),
-         $self -> {"template"} -> load_template("userbar/profile_loggedout.tem", {"***url-login***" => $self -> build_url(block => "login")}),
+    my ($import, $userprofile, $docs) =
+        ($self -> {"template"} -> load_template("userbar/import_disabled.tem"),
+         $self -> {"template"} -> load_template("userbar/profile_loggedout_http".($ENV{"HTTPS"} eq "on" ? "s" : "").".tem", {"***url-login***" => $loginurl}),
+         $self -> {"template"} -> load_template("userbar/doclink_disabled.tem"),
         );
+
+    # Is documentation available?
+    my $url = $self -> get_documentation_url($doclink);
+    $docs = $self -> {"template"} -> load_template("userbar/doclink_enabled.tem", {"***url-doclink***" => $url})
+        if($url);
 
     # Is the user logged in?
     if(!$self -> {"session"} -> anonymous_session()) {
         my $user = $self -> {"session"} -> get_user_byid()
             or return $self -> self_error("Unable to obtain user data for logged in user. This should not happen!");
 
-        $siteadmin = $self -> {"template"} -> load_template("userbar/siteadmin_enabled.tem", {"***url-admin***"   => $self -> build_url(block => "admin"   , pathinfo => [])})
-            if($self -> check_permission("siteadmin"));
+        $import  = $self -> {"template"} -> load_template("userbar/import_enabled.tem"  , {"***url-import***" => $self -> build_url(block => "import", pathinfo => [])})
+            if($self -> check_permission("import") && $current ne "import");
 
         # User is logged in, so actually reflect their current options and state
         $userprofile = $self -> {"template"} -> load_template("userbar/profile_loggedin.tem", {"***realname***"    => $user -> {"fullname"},
@@ -63,10 +84,11 @@ sub block_display {
                                                                                                "***url-logout***"  => $self -> build_url(block => "login"  , pathinfo => ["logout"])});
     } # if(!$self -> {"session"} -> anonymous_session())
 
-    return $self -> {"template"} -> load_template("userbar/userbar.tem", {"***pagename***"   => $title,
-                                                                          "***mainurl***"    => $self -> build_url(block => $self -> {"settings"} -> {"config"} -> {"default_block"}, pathinfo => []),
-                                                                          "***site-admin***" => $siteadmin,
-                                                                          "***profile***"    => $userprofile});
+    return $self -> {"template"} -> load_template("userbar/userbar.tem", {"***pagename***"  => $title,
+                                                                          "***front_url***" => $fronturl,
+                                                                          "***import***"    => $import,
+                                                                          "***doclink***"   => $docs,
+                                                                          "***profile***"   => $userprofile});
 }
 
 
