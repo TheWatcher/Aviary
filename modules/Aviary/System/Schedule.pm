@@ -1,4 +1,4 @@
-# @file
+## @file
 # This file contains the implementation of the aviary schedule model.
 #
 # @author  Chris Page &lt;chris@starforge.co.uk&gt;
