@@ -25,6 +25,7 @@ use lib "$scriptpath/modules";
 use Aviary::System::Schedule;
 use Aviary::System::Twitter;
 
+
 ## @fn void handle_daemon($daemon)
 # Handle the daemonisation or management of the daemon process.
 #
@@ -133,7 +134,7 @@ sub post_schedule {
             next;
         }
 
-        $message -> {"tweet"} =~ s/[\#\@]//g;
+#        $message -> {"tweet"} =~ s/[\#\@]//g; # Uncomment if testing @foo and #bar is needed.
         $logger -> print(Webperl::Logger::NOTICE, "Posting tweet ".$message -> {"id"}." (user ".$message -> {"creator_id"}.") = ".$message -> {"tweet"});
 
         eval { $user_twitter -> update($message -> {"tweet"}); };
