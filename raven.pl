@@ -5,6 +5,7 @@ use Proc::Daemon;
 use FindBin;
 use List::Util qw(min);
 use DateTime;
+use Scalar::Util qw(blessed);
 
 use lib qw(/var/www/webperl);
 use Webperl::ConfigMicro;
@@ -79,9 +80,17 @@ sub post_schedule {
         $logger -> print(Webperl::Logger::NOTICE, "Posting ".$message -> {"id"}." = ".$message -> {"tweet"});
 
         eval { $twitter -> update($message -> {"tweet"}); };
-        $logger -> die_log("Tweet failed: $@")
-            if($@);
+        if($@) {
+            if(blessed $@ && $@ -> isa('Net::Twitter::Lite::Error')) {
+                my $error = $@ -> error;
+                $error = "Probable duplicate tweet" if($error eq "403: Forbidden");
+                $logger -> warn_log("Tweet failed: $error");
+            } else {
+                $logger -> die_log("Tweet failed: $@")
+            }
+        }
 
+        # Always mark as posted, even if there was an error.
         $schedule -> mark_as_posted($message -> {"id"})
             or $logger -> die_log("Scheduler failed: ".$schedule -> errstr());
     }
