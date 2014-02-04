@@ -24,6 +24,7 @@ use strict;
 use base qw(Webperl::SystemModule);
 
 use Spreadsheet::ParseExcel;
+use Spreadsheet::ParseExcel::FmtUTF8;
 use Spreadsheet::ParseExcel::Utility qw(ExcelLocaltime);
 use DateTime;
 
@@ -52,7 +53,7 @@ sub load_schedule {
     $self -> clear_error();
 
     # Parse the specified workbook
-    my $workbook = $parser -> parse($bookname);
+    my $workbook = $parser -> parse($bookname, Spreadsheet::ParseExcel::FmtUTF8 -> new());
     return $self -> self_error("Unable to parse spreadsheet '$bookname': ".$parser -> error())
         if(!defined($workbook));
 
