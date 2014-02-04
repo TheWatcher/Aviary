@@ -4,6 +4,8 @@ use utf8;
 use v5.12;
 use lib qw(/var/www/webperl);
 use FindBin;
+use Devel::Peek qw(Dump);
+use Encode;
 
 # Work out where the script is, so module and config loading can work.
 my $scriptpath;
@@ -31,5 +33,13 @@ my $parser = Aviary::System::SheetParser -> new(logger => $logger,
                                                 minimal => 1)
     or die "FATAL: Unable to create parser object\n";
 
-print "Schedule:\n".Dumper($parser -> load_schedule("/home/chris/perltesting/test.xls",
-                                                    0));
+my $data = $parser -> load_schedule("/home/chris/perltesting/test.xls",
+                                                    0);
+binmode STDOUT,":utf8";
+my $tweets = $data -> [0] -> {"tweets"};
+foreach my $time (keys(%{$tweets})) {
+    foreach my $msg (@{$tweets -> {$time}}) {
+        print Dump($msg),"\n";
+        print "$msg\n";
+    }
+}
