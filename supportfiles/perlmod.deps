@@ -25,8 +25,6 @@ XML::Simple
 
 Required modules, usuallny not in repost, install from CPAN:
 
-DateTime::Event::Cron
-Email::MIME::CreateHTML
 MediaWiki::API
 HTML::FormatText
 HTML::Tidy (Requires tidyp from http://tidyp.com/ )
@@ -35,4 +33,3 @@ WebService::Validator::HTML::W3C
 Crypt::Eksblowfish::Bcrypt
 Net::SSH::Expect
 CGI::Compress::Gzip
-Lingua::EN::Sentence

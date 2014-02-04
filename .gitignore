@@ -12,3 +12,4 @@ templates/default/datepicker
 .emacs.desktop
 .emacs.desktop.lock
 templates/default/MultiSelect
+modules/Net/

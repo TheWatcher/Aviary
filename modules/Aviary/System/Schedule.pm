@@ -35,6 +35,8 @@ sub clear_unposted {
     my $userid = shift;
     my $source = shift;
 
+    $self -> clear_error();
+
     my $nukeh = $self -> {"dbh"} -> prepare("DELETE FROM `".$self -> {"settings"} -> {"database"} -> {"schedule"}."`
                                              WHERE creator_id = ?
                                              AND source LIKE ?
@@ -66,6 +68,8 @@ sub import_schedule {
     my $incpast  = shift;
     my $added    = 0;
     my $now      = time();
+
+    $self -> clear_error();
 
     # This query will be used a lot, so prepare in advance
     my $schedh = $self -> {"dbh"} -> prepare("INSERT INTO `".$self -> {"settings"} -> {"database"} -> {"schedule"}."`
@@ -100,6 +104,97 @@ sub import_schedule {
     }
 
     return $added;
+}
+
+
+## @method $ get_pending_scheduled($time)
+# Given a unix timestamp, work out which messages in the schedule need to be
+# posted. This will return a list of all messages in the schedule with a post
+# at time equal to or less than the specified time.
+#
+# @param time The time to use to determine which messages need posting. If
+#             this is not specified the current time rounded up to the next
+#             minute is used.
+# @return A reference to an array of scheduled messages to post on success,
+#         undef on error. This may return an empty array if no scheduled
+#         messages need posting.
+sub get_pending_scheduled {
+    my $self = shift;
+    my $time = shift;
+
+    # If no time has been specified, use the current time rounded up.
+    if(!defined($time)) {
+        $time = time();
+        $time += (60 - $time % 60);
+    }
+
+    $self -> clear_error();
+
+    my $topost = $self -> {"dbh"} -> prepare("SELECT *
+                                              FROM `".$self -> {"settings"} -> {"database"} -> {"schedule"}."`
+                                              WHERE `post_at` <= ?
+                                              AND `posted` IS NULL
+                                              ORDER BY `post_at` ASC, `added` ASC");
+    $topost -> execute($time)
+        or return $self -> self_error("Unable to execute pending schedule lookup: ".$self -> {"dbh"} -> errstr);
+
+    return $topost -> fetchall_arrayref({});
+}
+
+
+## @method $ mark_as_posted($id)
+# Mark the specified message as posted.
+#
+# @param id The ID of the scheduled message to mark as posted.
+# @return true on success, undef on error.
+sub mark_as_posted {
+    my $self = shift;
+    my $id   = shift;
+
+    $self -> clear_error();
+
+    my $markh = $self -> {"dbh"} -> prepare("UPDATE `".$self -> {"settings"} -> {"database"} -> {"schedule"}."`
+                                             SET `posted` = UNIX_TIMESTAMP()
+                                             WHERE `id` = ?");
+    my $rows = $markh -> execute($id);
+    return $self -> self_error("Unable to execute post update: ".$self -> {"dbh"} -> errstr) if(!$rows);
+    return $self -> self_error("Post update failed: no rows updated.") if($rows eq "0E0");
+
+    return 1;
+}
+
+
+## @method $ get_next_schedule_time($time)
+# Given a time, work out when the next message is due to be posted.
+#
+# @param time The time to start looking for the next scheduled message from.
+#             If not specified, the current time rounded up to the minute is used.
+# @return The unix timestamp of the next scheduled post time on success,
+#         undef on error. This will return 0 if there are no scheduled messages.
+sub get_next_schedule_time {
+    my $self = shift;
+    my $time = shift;
+
+    # If no time has been specified, use the current time rounded up.
+    if(!defined($time)) {
+        $time = time();
+        $time += (61 - $time % 60); # yes, 61: this avoid problems with get_pending_scheduled()
+    }
+
+    $self -> clear_error();
+
+    my $nexth = $self -> {"dbh"} -> prepare("SELECT `post_at`
+                                             FROM `".$self -> {"settings"} -> {"database"} -> {"schedule"}."`
+                                             WHERE `post_at` >= ?
+                                             AND `posted` IS NULL
+                                             ORDER BY `post_at` ASC
+                                             LIMIT 1");
+    $nexth -> execute($time)
+        or return $self -> self_error("Unable to execute next schedule lookup: ".$self -> {"dbh"} -> errstr);
+
+    my $postat = $nexth -> fetchrow_arrayref();
+
+    return $postat ? $postat -> [0]: 0;
 }
 
 1;
