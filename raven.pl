@@ -23,7 +23,58 @@ BEGIN {
 
 use lib "$scriptpath/modules";
 use Aviary::System::Schedule;
-use Net::Twitter::Lite::WithAPIv1_1;
+use Aviary::System::Twitter;
+
+## @fn void handle_daemon($daemon)
+# Handle the daemonisation or management of the daemon process.
+#
+# @param daemon A reference to a Webperl::Daemon object
+sub handle_daemon {
+    my $daemon = shift;
+
+    given($ARGV[0]) {
+        when("start") {
+            my $result = $daemon -> run('start');
+            exit 0 if($result == Webperl::Daemon::STATE_ALREADY_RUNNING);
+        }
+
+        when("stop") {
+            exit $daemon -> run('stop');
+        }
+
+        when("restart") {
+            my $result = $daemon -> run('restart');
+            exit $result unless($result == Webperl::Daemon::STATE_OK);
+        }
+
+        when("status") {
+            my $status = $daemon -> run('status');
+            given($status) {
+                when(Webperl::Daemon::STATE_OK) {
+                    print "Status: started.\n";
+                }
+                when(Webperl::Daemon::STATE_NOT_RUNNING) {
+                    print "Status: stopped.\n";
+                }
+                default {
+                    print "Status: unknown\n"
+                }
+            }
+            exit $status;
+        }
+
+        when("wake") {
+            exit $daemon -> signal(14);
+        }
+
+        when("debug") { # do nothing
+        }
+
+        default {
+            die "Usage: $0 start|stop|restart|wake|debug\n";
+        }
+    }
+}
 
 
 ## @fn void schedule_wait($logger, $settings, $schedule)
@@ -61,7 +112,7 @@ sub schedule_wait {
 # @param settings A reference to the system settings.
 # @param schedule A reference to an Aviary::System::Schedule object to check
 #                 the schedule through.
-# @param twitter  A reference to a Net::Twitter::Lite object to post to twitter through.
+# @param twitter  A reference to a Aviary::System::Twitter object to access twitter through.
 sub post_schedule {
     my $logger   = shift;
     my $settings = shift;
@@ -76,10 +127,16 @@ sub post_schedule {
     $logger -> print(Webperl::Logger::NOTICE, "Got ".scalar(@{$to_post})." pending messages");
 
     foreach my $message (@{$to_post}) {
-        $message -> {"tweet"} =~ s/[\#\@]//g;
-        $logger -> print(Webperl::Logger::NOTICE, "Posting ".$message -> {"id"}." = ".$message -> {"tweet"});
+        my $user_twitter = $twitter -> get_twitter($message -> {"creator_id"});
+        if(!$user_twitter) {
+            $logger -> warn_log("Tweet skipped: ".$twitter -> errstr());
+            next;
+        }
 
-        eval { $twitter -> update($message -> {"tweet"}); };
+        $message -> {"tweet"} =~ s/[\#\@]//g;
+        $logger -> print(Webperl::Logger::NOTICE, "Posting tweet ".$message -> {"id"}." (user ".$message -> {"creator_id"}.") = ".$message -> {"tweet"});
+
+        eval { $user_twitter -> update($message -> {"tweet"}); };
         if($@) {
             if(blessed $@ && $@ -> isa('Net::Twitter::Lite::Error')) {
                 my $error = $@ -> error;
@@ -104,7 +161,7 @@ my $settings = Webperl::ConfigMicro -> new(path_join($scriptpath, "config", "sit
     or $logger -> die_log("FATAL: Unable to load config: ".$Webperl::SystemModule::errstr);
 
 my $daemon = Webperl::Daemon -> new(pidfile => $settings -> {"raven"} -> {"pidfile"});
-$daemon -> run('start');
+handle_daemon($daemon);
 
 $logger -> print(Webperl::Logger::NOTICE, "Started background Twitter poster");
 
@@ -119,12 +176,11 @@ my $schedule = Aviary::System::Schedule -> new(logger   => $logger,
                                                dbh      => $dbh)
     or $logger -> die_log($Webperl::SystemModule::errstr);
 
-my $twitter = Net::Twitter::Lite::WithAPIv1_1 -> new(consumer_key        => $settings -> {"twitter"} -> {"consumer_key"},
-                                                     consumer_secret     => $settings -> {"twitter"} -> {"consumer_secret"},
-                                                     access_token        => $settings -> {"twitter"} -> {"access_token"},
-                                                     access_token_secret => $settings -> {"twitter"} -> {"token_secret"},
-                                                     ssl                 => 1,
-                                                     wrap_result         => 1);
+my $twitter = Aviary::System::Twitter -> new(logger   => $logger,
+                                             settings => $settings,
+                                             dbh      => $dbh)
+    or $logger -> die_log($Webperl::SystemModule::errstr);
+
 
 # Make the default alarm handler ignore the signal. This should still make sleep() wake, though.
 $SIG{"ALRM"} = sub { $logger -> print(Webperl::Logger::NOTICE, "Received alarm signal") };
