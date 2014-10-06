@@ -1,6 +1,7 @@
 #!/usr/bin/perl
 
 use v5.12;
+use experimental qw(smartmatch); # Damn you 5.18
 use Proc::Daemon;
 use FindBin;
 use List::Util qw(min);
@@ -65,7 +66,7 @@ sub handle_daemon {
         }
 
         when("wake") {
-            exit $daemon -> signal(14);
+            exit $daemon -> send_signal(14);
         }
 
         when("debug") { # do nothing
