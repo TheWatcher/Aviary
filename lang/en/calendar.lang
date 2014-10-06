@@ -1,0 +1,9 @@
+CALENDAR_ADDTWEET = Add tweet
+
+CALENDAR_DAY1 = Monday
+CALENDAR_DAY2 = Tuesday
+CALENDAR_DAY3 = Wednesday
+CALENDAR_DAY4 = Thursday
+CALENDAR_DAY5 = Friday
+CALENDAR_DAY6 = Saturday
+CALENDAR_DAY7 = Sunday
