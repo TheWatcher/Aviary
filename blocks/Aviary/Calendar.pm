@@ -67,6 +67,21 @@ sub build_current_month {
 }
 
 
+sub fix_dow {
+    my $self = shift;
+    my $dow  = shift;
+    my $start_sunday = shift;
+
+    if($start_sunday) {
+        $dow %= 7; # 0 = sunday, 1 = monday, 6 = friday
+    } else {
+        --$dow; # 0 = monday, 6 = sunday
+    }
+
+    return $dow;
+}
+
+
 ## @method $ get_grid_info($year, $month, $start_monday)
 # Given a month and date, build a hash that desribes the dates that
 # should be shown in the 6x7 grid of days shown to the user.
@@ -89,12 +104,7 @@ sub get_grid_info {
 
     # Which day of the week is the first of the month on?
     # Remember to adjust for sun/mon start
-    my $start_day = $monthdate -> day_of_week(); # 1 = monday, 7 = sunday
-    if($start_sunday) {
-        $start_day = $start_day % 7; # 0 = sunday, 1 = monday, 6 = friday
-    } else {
-        --$start_day; # 0 = monday, 6 = sunday
-    }
+    my $start_day = $self -> fix_dow($monthdate -> day_of_week(), $start_sunday);
 
     # Start building the grid data hash
     my $griddata = { "firstdate" => $monthdate -> clone(),
@@ -114,6 +124,7 @@ sub get_grid_info {
         push(@{$griddata -> {"days"}}, {"start"   => $monthdate -> epoch(),  # The start timestamp, for database stuff
                                         "daynum"  => $monthdate -> day(),    # Which day in the month is it for convenience
                                         "month"   => $monthdate -> month(),  # And which month, likewise
+                                        "dow"     => $monthdate -> day_of_week(),
                                         "inmonth" => ($monthdate -> month() == $month), # Is this day in the target month?
                                        });
 
@@ -141,7 +152,7 @@ sub _generate_day_names {
     my $days         = "";
 
     foreach my $day (1..7) {
-        my $name = $self -> {"template"} -> replace_langvar("CALENDAR_DAY".($start_sunday ? (($day + 6) % 7) + 1 : $day));
+        my $name = $self -> {"template"} -> replace_langvar("CALENDAR_DAY".($start_sunday ? (($day + 5) % 7) + 1 : $day));
         $days .= $self -> {"template"} -> load_template("calendar/daynames.tem", {"{T_[id]}"   => "day_".($day - 1),
                                                                                   "{T_[name]}" => $name});
     }
@@ -170,21 +181,25 @@ sub _generate_calendar_page {
     foreach my $week (0..5) {
         my $days = "";
         foreach my $day (0..6) {
-            $days = $self -> {"template"} -> load_template("calendar/day.tem", { "{T_[dayid]}"    => $id,
-                                                                                 "{T_[dayclass]}" => $grid -> {"days"} -> [$id] -> {"inmonth"} ? "inmonth" : "outmonth",
-                                                                                 "{T_[daynum]}"   => $grid -> {"days"} -> [$id] -> {"daynum"},
-                                                           });
+            $days .= $self -> {"template"} -> load_template("calendar/day.tem", { "{T_[dayid]}"    => $id,
+                                                                                  "{T_[dayclass]}" => $grid -> {"days"} -> [$id] -> {"inmonth"} ? "inmonth" : "outmonth",
+                                                                                  "{T_[daynum]}"   => $grid -> {"days"} -> [$id] -> {"daynum"},
+                                                                                  "{T_[dow]}"      => "dow".$grid -> {"days"} -> [$id] -> {"dow"},
+                                                            });
             ++$id;
         }
         $weeks .= $self -> {"template"} -> load_template("calendar/week.tem", {"{T_[days]}" => $days});
     }
 
-    return $self -> {"template"} -> load_template("calendar/content.tem", {"{T_[monthname]}" => $grid -> {"startdate"} -> month_name(),
-                                                                           "{T_[year]}"      => $year,1
-                                                                           "{T_[month]}"     => $month,
-                                                                           "{T_[daynames]}"  => $self -> _generate_day_names($start_sunday),
-                                                                           "{T_[weeks]}"     => $weeks,
-                                                  });
+    return ($self -> {"template"} -> load_template("calendar/title.tem", {"{T_[monthname]}" => $grid -> {"firstdate"} -> month_name(),
+                                                                          "{T_[year]}"      => $year,
+                                                                          "{T_[month]}"     => $month,}),
+            $self -> {"template"} -> load_template("calendar/content.tem", {"{T_[monthname]}" => $grid -> {"firstdate"} -> month_name(),
+                                                                            "{T_[year]}"      => $year,
+                                                                            "{T_[month]}"     => $month,
+                                                                            "{T_[daynames]}"  => $self -> _generate_day_names($start_sunday),
+                                                                            "{T_[weeks]}"     => $weeks,
+                                                   }));
 }
 
 

@@ -1,0 +1,2 @@
+    <link href="{V_[templatepath]}css/calendar.css" rel="stylesheet" />
+    <script type="text/javascript" src="{V_[templatepath]}js/calendar.js"></script>

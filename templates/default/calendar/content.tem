@@ -1,19 +1,21 @@
-<div id="calendar_body" class="shadowbox">
-    <h2>{L_CALENDAR_TITLE}: {T_[monthname]} {T_[year]}</h2>
-    <div class="sbcontent">
-        <div id="datenav"><a id="prevdate" href="{T_[prevurl]}"><img src="{V_[templatepath]}images/previous.png" width="22" height="22" alt="prev" /></a>
-                          <a id="nextdate" href="{T_[nexturl]}"><img src="{V_[templatepath]}images/next.png" width="22" height="22" alt="next" /></a>
-                          <input class="datepick" type="text" name="month" id="list_month" size="16" maxlength="16" value="{T_[month]} {T_[year]}" />
-        </div>
-        <table class="calendar">
-            <thead>
-                <tr>
+<div id="calendar">
+    <div id="calendar_body" class="shadowbox">
+        <h2>{L_CALENDAR_TITLE}: {T_[monthname]} {T_[year]}</h2>
+        <div class="sbcontent">
+            <div id="datenav"><a id="prevdate" href="{T_[prevurl]}"><img src="{V_[templatepath]}images/calendar/previous.png" width="12" height="12" alt="prev" /></a>
+                              <a id="nextdate" href="{T_[nexturl]}"><img src="{V_[templatepath]}images/calendar/next.png" width="12" height="12" alt="next" /></a>
+                              <input class="datepick" type="text" name="month" id="list_month" size="16" maxlength="16" value="{T_[monthname]} {T_[year]}" />
+            </div>
+            <table class="calendar">
+                <thead>
+                    <tr>
 {T_[daynames]}
-                </tr>
-            </thead>
-            <tbody>
+                    </tr>
+                </thead>
+                <tbody>
 {T_[weeks]}
-            </tbody>
-        </table>
+                </tbody>
+            </table>
+        </div>
     </div>
 </div>

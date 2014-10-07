@@ -1,6 +1,8 @@
-<td class="day {T_[dayclass]}" id="{T_[dayid]}">
-    <div class="daynum">{T_[daynum]}</div>
-    <div class="tweetlist">
+<td class="day {T_[dayclass]} {T_[dow]}" id="{T_[dayid]}">
+    <div class="day">
+        <div class="daynum">{T_[daynum]}</div>
+        <div class="tweetlist">
+        </div>
     </div>
-    <div class="newtweet"><img src="{V_[templatepath]}images/calendar/addtweet.png" width="16" height="16" alt="add" /> {L_CALENDAR_ADDTWEET}</div>
+    <div class="newtweet">{L_CALENDAR_ADDTWEET}</div>
 </td>

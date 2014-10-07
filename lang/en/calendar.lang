@@ -1,4 +1,5 @@
-CALENDAR_ADDTWEET = Add tweet
+CALENDAR_TITLE    = Tweet Schedule
+CALENDAR_ADDTWEET = + Add tweet
 
 CALENDAR_DAY1 = Monday
 CALENDAR_DAY2 = Tuesday

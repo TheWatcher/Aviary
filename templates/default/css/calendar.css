@@ -1,0 +1,105 @@
+@charset "utf-8";
+
+#calendar {
+    margin: 0px auto;
+    margin-top: 40px;
+    width: 95%;
+}
+
+table.calendar {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 5px auto;
+}
+
+table.calendar td {
+    border: 1px solid #ddd;
+    padding: 2px;
+}
+
+table.calendar td {
+    border-bottom: 5px solid #ddd;
+}
+
+table.calendar tr:last-child td {
+    border-bottom: 1px solid #ddd;
+}
+
+table.calendar td.day div.day {
+    min-height: 3em;
+    padding-bottom: 0.5em;
+}
+
+table.calendar td.inmonth {
+    background: #fff;
+}
+
+table.calendar td.inmonth div.daynum {
+    font-weight: bold;
+}
+
+table.calendar td.dow6, table.calendar td.dow7 {
+    background: #def5f5;
+}
+
+table.calendar td.outmonth {
+    background: #eee;
+    color: #777;
+}
+
+table.calendar td.outmonth.dow6,table.calendar td.outmonth.dow7 {
+    color: #777;
+    background: #EFF;
+}
+
+
+table.calendar th {
+    padding: 7px 0px;
+    text-align: center;
+    background: #ddd;
+}
+
+table.calendar th:first-child {
+    border-top-left-radius: 5px;
+}
+
+table.calendar th:last-child {
+    border-top-right-radius: 5px;
+}
+
+table.calendar td div.daynum {
+    text-align: right;
+    border-bottom: 1px solid #dedede;
+}
+
+table.calendar td div.newtweet {
+    font-size: 11px;
+    text-align: center;
+}
+
+table.calendar td div.newtweet img {
+    padding-top: 2px;
+}
+
+#prevdate {
+    float: left;
+    width: 14px;
+    margin-top: 9px;
+}
+
+#nextdate {
+    float: right;
+    width: 14px;
+    margin-top: 9px;
+}
+
+#list_month {
+    width: 150px;
+    margin: 2px 0px;
+}
+
+#datenav {
+    float: left;
+    width: 209px;
+    white-space: nowrap;
+}
