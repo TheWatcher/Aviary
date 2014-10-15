@@ -7,6 +7,7 @@ use FindBin;
 use List::Util qw(min);
 use DateTime;
 use Scalar::Util qw(blessed);
+use LWP::UserAgent;
 
 use lib qw(/var/www/webperl);
 use Webperl::ConfigMicro;
@@ -110,6 +111,34 @@ sub schedule_wait {
 }
 
 
+#
+# @param logger   A reference to the system logger object.
+# @param settings A reference to the system settings.
+# @param url      The URL of the image file to download.
+# @return The name of the saved file on success, undef on error.
+sub get_image_file {
+    my $logger   = shift;
+    my $settings = shift;
+    my $url      = shift;
+
+    my $ua = LWP::UserAgent -> new();
+    my ($filename) = $url =~ m|/([^/]+)$|;
+    if(!$filename) {
+        $@ = "Unable to extract filename from '$url'";
+        return undef;
+    }
+
+    my $tempfile = path_join($settings -> {"raven"} -> {"tmpdir"}, $filename);
+    my $result = $ua -> get($url, ":content_file" => $tempfile);
+    if(!$result -> is_success) {
+        $@ = "Unable to download image from '$url': ".$result -> status_line;
+        return undef;
+    }
+
+    return $tempfile;
+}
+
+
 # @param logger   A reference to the system logger object.
 # @param settings A reference to the system settings.
 # @param schedule A reference to an Aviary::System::Schedule object to check
@@ -136,9 +165,17 @@ sub post_schedule {
         }
 
 #        $message -> {"tweet"} =~ s/[\#\@]//g; # Uncomment if testing @foo and #bar is needed.
-        $logger -> print(Webperl::Logger::NOTICE, "Posting tweet ".$message -> {"id"}." (user ".$message -> {"creator_id"}.") = ".$message -> {"tweet"});
+        $logger -> print(Webperl::Logger::NOTICE, "Posting tweet ".$message -> {"id"}." (user ".$message -> {"creator_id"}.") = ".$message -> {"tweet"}.($message -> {"image"} ? " including image from ".$message -> {"image"} : ""));
 
-        eval { $user_twitter -> update($message -> {"tweet"}); };
+        if($message -> {"image"}) {
+            my $imgfile = get_image_file($logger, $settings, $message -> {"image"});
+            if($imgfile) {
+                eval { $user_twitter -> update_with_media($message -> {"tweet"}, [$imgfile]); };
+                unlink($imgfile);
+            }
+        } else {
+            eval { $user_twitter -> update($message -> {"tweet"}); };
+        }
         if($@) {
             if(blessed $@ && $@ -> isa('Net::Twitter::Lite::Error')) {
                 my $error = $@ -> error;

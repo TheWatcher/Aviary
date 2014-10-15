@@ -73,8 +73,8 @@ sub import_schedule {
 
     # This query will be used a lot, so prepare in advance
     my $schedh = $self -> {"dbh"} -> prepare("INSERT INTO `".$self -> {"settings"} -> {"database"} -> {"schedule"}."`
-                                              (`post_at`, `added`, `creator_id`, `edited`, `editor_id`, `source`, `tweet`)
-                                              VALUES(?, UNIX_TIMESTAMP(), ?, UNIX_TIMESTAMP(), ?, ?, ?)");
+                                              (`post_at`, `added`, `creator_id`, `edited`, `editor_id`, `source`, `tweet`, `image`)
+                                              VALUES(?, UNIX_TIMESTAMP(), ?, UNIX_TIMESTAMP(), ?, ?, ?, ?)");
 
     # The schedule arrayref contains a list of days
     foreach my $day (@{$schedule}) {
@@ -94,7 +94,7 @@ sub import_schedule {
 
                 # Process the list of tweets for the current time and day.
                 foreach my $tweet (@{$day -> {"tweets"} -> {$time}}) {
-                    $schedh -> execute($postat, $userid, $userid, $source, $tweet)
+                    $schedh -> execute($postat, $userid, $userid, $source, $tweet -> {"text"}, $tweet -> {"image"})
                         or return $self -> self_error("Failed to add ".$day -> {"date"}.":$tweet to schedule: ".$self -> {"dbh"} -> errstr);
 
                     ++$added;

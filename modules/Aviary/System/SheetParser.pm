@@ -200,6 +200,28 @@ sub _get_tweet_text {
 }
 
 
+## @method private $ _get_tweet_image($sheet, $col, $row)
+# Given a sheet and cell location, determine whether the cell at that location
+# appears to be a URL, and if it is return the string.
+#
+# @param sheet The worksheet containing the tweet image URL
+# @param col   The column the tweet image URL should be in.
+# @param row   The row the tweet image URL should be in.
+# @return A string containing the tweet image URL if the cell contains one, undef
+#         if the column or row are not valid, or the cell at (col, row) is
+#         not a URL.
+sub _get_tweet_image {
+    my $self  = shift;
+    my $sheet = shift;
+    my $col   = shift;
+    my $row   = shift;
+    my $cell  = $sheet -> get_cell($row, $col);
+
+    return undef if(!$cell || $cell -> value() !~ m|^https?://$|);
+    return $cell -> value();
+}
+
+
 ## @method private $ _find_tweetlist($sheet, $datecol, $daterow)
 # Given the location of a date cell in the specified sheet, pull out any tweets
 # scheduled to go out on that date from the surrounding sheet.
@@ -215,10 +237,10 @@ sub _find_tweetlist {
     my $datecol = shift;
     my $daterow = shift;
 
-    # Times start on the row below the date, one column left.
-    my $timerow  = $daterow + 1;
-    my $timecol  = $datecol - 1;
-    my $tweetcol = $datecol; # Tweets are below the date
+    my $timerow  = $daterow + 1; # Times start on the row below the date
+    my $timecol  = $datecol - 1; # And times are one column left of the date
+    my $imgcol   = $datecol + 1; # While image URL/names are to the right
+    my $tweetcol = $datecol;     # Tweets are below the date
 
     my $tweets = {};
     while(1) {
@@ -228,8 +250,11 @@ sub _find_tweetlist {
         my $tweet = $self -> _get_tweet_text($sheet, $tweetcol, $timerow);
         last unless(defined($tweet));
 
+        my $image = $self -> _get_tweet_image($sheet, $imgcol, $timerow);
+
         # Allow multiple tweets with the same time.
-        push(@{$tweets -> {$time}}, $tweet)
+        push(@{$tweets -> {$time}}, {"text"  => $tweet,
+                                     "image" => $image})
             if($time && $tweet);
 
         ++$timerow;
