@@ -13,3 +13,4 @@ templates/default/datepicker
 .emacs.desktop.lock
 templates/default/MultiSelect
 modules/Net
+tmpfiles
