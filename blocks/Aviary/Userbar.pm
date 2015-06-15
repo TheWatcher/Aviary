@@ -22,6 +22,7 @@
 package Aviary::Userbar;
 
 use strict;
+use experimental 'smartmatch';
 use base qw(Aviary);
 use v5.12;
 

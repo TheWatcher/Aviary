@@ -20,6 +20,7 @@
 package Aviary::ImportExcel;
 
 use strict;
+use experimental 'smartmatch';
 use base qw(Aviary); # This class extends the Aviary block class
 use v5.12;
 use Webperl::Utils qw(path_join);

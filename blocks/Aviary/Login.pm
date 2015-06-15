@@ -23,6 +23,7 @@
 package Aviary::Login;
 
 use strict;
+use experimental 'smartmatch';
 use base qw(Aviary); # This class extends the Aviary block class
 use Webperl::Utils qw(path_join is_defined_numeric);
 use v5.12;
