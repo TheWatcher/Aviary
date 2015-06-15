@@ -27,7 +27,7 @@ use Spreadsheet::ParseExcel;
 use Spreadsheet::ParseExcel::FmtUTF8;
 use Spreadsheet::ParseExcel::Utility qw(ExcelLocaltime);
 use DateTime;
-
+use Data::Dumper;
 
 # ==============================================================================
 # Public interface
@@ -217,7 +217,7 @@ sub _get_tweet_image {
     my $row   = shift;
     my $cell  = $sheet -> get_cell($row, $col);
 
-    return undef if(!$cell || $cell -> value() !~ m|^https?://$|);
+    return undef if(!$cell || $cell -> value() !~ m|^https?://|);
     return $cell -> value();
 }
 
